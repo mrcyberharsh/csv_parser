@@ -45,15 +45,17 @@ char *readline(FILE *file, char *line) {
     /* Do not silently return a truncated physical line. */
     size_t length = strlen(line);
     if (length == CSV_PARSER_MAX_LINE_LENGTH - 1 &&
-        line[length - 1] != '\n' && !feof(file)) {
-        int ch;
-        while ((ch = fgetc(file)) != '\n' && ch != EOF) {
-            /* Discard the remainder so the next call starts on a new line. */
+        line[length - 1] != '\n') {
+        int ch = fgetc(file);
+        if (ch != EOF && ch != '\n') {
+            while ((ch = fgetc(file)) != '\n' && ch != EOF) {
+                /* Discard the remainder so the next call starts on a new line. */
+            }
+            if (allocated_here) {
+                free(line);
+            }
+            return NULL;
         }
-        if (allocated_here) {
-            free(line);
-        }
-        return NULL;
     }
     return line;
 }
