@@ -1,28 +1,17 @@
-#!/bin/bash
+#!/bin/sh
+set -eu
 
-# This script will install the library on your system. Please use this script only if
-# your Operating System is Linux based and you have GCC installed.
+PREFIX="${PREFIX:-/usr/local}"
+BUILD_DIR="$(mktemp -d)"
+trap 'rm -rf "$BUILD_DIR"' EXIT
 
-check_error() {
-  if [[ $? -ne 0 ]]; then
-    echo "Error: Failed to copy the header file to /usr/include."
-    exit 1
-  fi
-}
+printf '%s\n' "Building CSV parser..."
+cc -std=c11 -O2 -Wall -Wextra -Werror -fPIC -I. -c src/parser.c -o "$BUILD_DIR/parser.o"
+cc -shared -o "$BUILD_DIR/libcsvparser.so" "$BUILD_DIR/parser.o"
 
-echo "Installing the library on your system..."
-echo "Compiling the source code..."
-gcc -fpic -c src/parser.c -o parser.o -I.
-check_error
-echo "Creating the shared library..."
-gcc -shared -o libcsvparser.so parser.o
-check_error
-echo "Copying the library to /usr/lib..."
-cp libcsvparser.so /usr/lib
-check_error
-echo "Copying the header file to /usr/include..."
-cp csvparser.h /usr/include
-check_error
-echo "Cleaning up the temporary files..."
-rm -rf parser.o libcsvparser.so
-echo "The library has been installed successfully."
+printf '%s\n' "Installing under $PREFIX..."
+install -d "$PREFIX/lib" "$PREFIX/include"
+install -m 755 "$BUILD_DIR/libcsvparser.so" "$PREFIX/lib/libcsvparser.so"
+install -m 644 csvparser.h "$PREFIX/include/csvparser.h"
+
+printf '%s\n' "Installation complete. Set your platform library path if needed."

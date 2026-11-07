@@ -1,40 +1,45 @@
 #ifndef CSV_PARSER_H
-#define CSV_PARSER_MAX_LINE_LENGTH 1024
-#define CSV_PARSER_QUOTE_FLAG 0x001
-#define CSV_PARSER_MAX_FIELDS 50
-#define CSV_PARSER_MAX_FIELD_LEN 1024
+#define CSV_PARSER_H
+
 #include <stdio.h>
 
+#ifndef CSV_PARSER_MAX_LINE_LENGTH
+#define CSV_PARSER_MAX_LINE_LENGTH 1024
+#endif
+
+#ifndef CSV_PARSER_MAX_FIELDS
+#define CSV_PARSER_MAX_FIELDS 50
+#endif
+
+#ifndef CSV_PARSER_MAX_FIELD_LEN
+#define CSV_PARSER_MAX_FIELD_LEN 1024
+#endif
+
 /*
-  Read a line from a file. Subsequent calls of this function on the same
-  file will read its next lines until EOF. If line is NULL, memory will
-  be allocated for it. If not, line will be overwritten. Recommended to
-  use a char *line on function calling instead of NULL for better 
-  performance.
-
-  Returns NULL when file is a null file pointer
-  Returns NULL when reach EOF
-
-  @param file A pointer to a file.
-  @param line A pointer to a char
-  @returns `char *` containing the line read from the file.
-  Don't forget to `free`the result after usage.
-*/
+ * Read one physical line into a buffer of CSV_PARSER_MAX_LINE_LENGTH bytes.
+ * If line is NULL, the function allocates the buffer; the caller must free it.
+ * If line is supplied, it must point to a writable buffer of the configured
+ * maximum size and remains owned by the caller.
+ *
+ * Returns NULL on EOF, invalid input, or an I/O error.
+ */
 char *readline(FILE *file, char *line);
 
 /*
-  Parse a CSV line and return a pointer with each field.
-
-  @param char *line The unparsed CSV line.
-  @param char *col_separator The character separating the columns.
-  
-  @return char ** The pointer containing every separated field from the line.
-*/
+ * Parse one CSV physical line. The first character of col_separator is used;
+ * NULL or an empty separator selects comma.
+ *
+ * Quoted fields may contain separators and doubled quotes (""). Surrounding
+ * quotes are removed and doubled quotes are decoded. Multi-line quoted fields
+ * are not supported by this line-based API.
+ *
+ * If buffer is NULL, a field array is allocated. Otherwise buffer must be a
+ * previously returned array from parseline and is cleared/reused.
+ * Returns NULL for malformed, oversized, or over-capacity input.
+ */
 char **parseline(char *line, char *col_separator, char **buffer);
 
-/*
-  Free the memory of the parseline function
-  @param char **line The pointer returned from parseline function.
-*/
+/* Release an array returned by parseline. NULL is accepted. */
 void freeparsedline(char **line);
+
 #endif

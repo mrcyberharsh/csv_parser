@@ -1,87 +1,87 @@
 # Aria's CSV Parser
 
-## Overview
-Aria's CSV Parser is a lightweight, easy-to-use CSV file parsing library written in C. It is designed to efficiently parse CSV files, handling different field separators and quote characters. The library provides functions to read and parse lines from CSV files, making it a suitable choice for applications requiring CSV processing in C. As the project evolves, I will implement functions to write and append CSV files.
+A small C library for reading physical lines and parsing CSV records with a configurable one-character field separator.
 
 ## Features
-- Read lines from CSV files.
-- Parse CSV lines into fields.
-- Handle custom column separators.
-- Memory management to prevent leaks.
-- Support for quoted fields.
 
-## Getting Started
+- Read lines from a FILE stream.
+- Parse fields using comma or a custom separator.
+- Support quoted fields containing separators.
+- Decode escaped double quotes inside quoted fields.
+- Preserve empty and trailing fields.
+- Enforce compile-time limits for line length, field count, and field length.
+- Reuse a previously allocated parser result buffer.
+- Return NULL for malformed or oversized input instead of writing beyond fixed buffers.
 
-### Prerequisites
-- A C compiler (GCC, Clang, etc.)
-- Basic knowledge of C and file handling in C.
+## Limits and behavior
 
-### Installation
-1. Clone the repository or download the source code to your software's `lib` folder.
-2. Include `csvparser.h` in your project.
-3. Compile your project with the CSV parser source files.
+Defaults in csvparser.h:
 
-### Usage
+| Macro | Default |
+|---|---:|
+| CSV_PARSER_MAX_LINE_LENGTH | 1024 bytes |
+| CSV_PARSER_MAX_FIELDS | 50 fields |
+| CSV_PARSER_MAX_FIELD_LEN | 1024 bytes |
 
-#### Reading a Line from a CSV File
+The parser handles one physical line at a time; multi-line quoted CSV fields are not supported. The separator uses its first character. Surrounding quotes are removed and doubled quotes are converted to one quote.
+
+If readline receives a NULL buffer, it allocates one and the caller must free it. If a caller supplies a buffer, that buffer remains caller-owned. parseline allocates its output when buffer == NULL; release it with freeparsedline. For reuse, pass the previously returned array back into parseline.
+
+## Build
+
+Build the shared library:
+
+```bash
+make
+```
+
+Run the test suite with AddressSanitizer and UndefinedBehaviorSanitizer:
+
+```bash
+make test
+# or
+./test.sh
+```
+
+## Install
+
+Install under /usr/local by default:
+
+```bash
+sudo make install
+```
+
+Choose another prefix if needed:
+
+```bash
+make install PREFIX="$HOME/.local"
+```
+
+The install script copies the shared library to PREFIX/lib and the header to PREFIX/include.
+
+## Example
+
 ```c
 #include "csvparser.h"
 #include <stdio.h>
 
-int main() {
-    FILE *file = fopen("yourfile.csv", "r");
-    char *line = NULL;
-    while ((line = readline(file, line)) != NULL) {
-        // Your code
-        printf("%s", line);
+int main(void) {
+    char line[] = "\"first, value\",second,third";
+    char **fields = parseline(line, NULL, NULL);
+    if (fields == NULL) {
+        fprintf(stderr, "Invalid or oversized CSV line\n");
+        return 1;
     }
-    free(line);
-    fclose(file);
-    return 0;
-}
-```
 
-#### Parsing a CSV Line
-```c
-#include "csvparser.h"
-
-int main() {
-    char *csvLine = "Field1,Field2,Field3";
-    char **fields = NULL;
-    fields = parseline(csvLine, ",", fields);
-    if (fields != NULL) {
-        // Process fields
-        for (int i = 0; fields[i] != NULL; i++) {
-            printf("%s\n", fields[i]);
-        }
+    for (int i = 0; i < 3; i++) {
+        printf("%s\n", fields[i]);
     }
+
     freeparsedline(fields);
     return 0;
 }
 ```
 
-#### Changing default size of constants
-
-In order to facilitate usage, some constants are defined to parse the lines and fields of the files.
-Their default values are:
-
-```c
-#define CSV_PARSER_MAX_LINE_LENGTH 1024
-#define CSV_PARSER_MAX_FIELDS 30
-#define CSV_PARSER_MAX_FIELD_LEN 1024
-```
-
-If you are working in a setting with limited memory, or just want to adjust the constants to your files,
-you can redefine them as you like.
-
-`CSV_PARSER_MAX_LINE_LENGTH` and `CSV_PARSER_MAX_FIELD_LEN` are `int` representing the maximum number of bytes, while `CSV_PARSER_MAX_FIELDS` is an `int` representing the maximum number of CSV columns it will handle.
-
-## Contributing
-Contributions are welcome! Feel free to submit pull requests, open issues, or suggest new features.
-
 ## License
-This project is builded under the MIT License
 
----
-
-Note: This README is a work in progress and will be updated as the library evolves.
+MIT License. See LICENSE.txt.
